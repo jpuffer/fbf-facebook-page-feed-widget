@@ -19,7 +19,6 @@ Version: 1.1
     GNU General Public License for more details.
 */
 
-
 // Display Facebook messages
 function fbf_facebook_messages($options) {
 
@@ -37,70 +36,83 @@ function fbf_facebook_messages($options) {
 	
 	$avatar_size = ($options['avatar_size']) ? $options['avatar_size'] : 'small'; // avatar_size	
 	
-	// Credits http://www.kaylaknight.com/reading-a-facebook-page-rss-feed-with-php/
-	 // Without this "ini_set" Facebook's RSS url is all screwy for reading!
-    // This is the most essential line, don't forget it.
-    ini_set('user_agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9');
+
+
+ // Fetching feed using wordpress // Credits http://digwp.com/2011/09/feed-display-multiple-columns/
  
-    // This URL is the URL to the Facebook Page's RSS feed.
-    // Go to the page's profile, and on the left-hand side click "Get Updates vis RSS"
-    $rssUrl = "http://www.facebook.com/feeds/page.php?id=".$options['pageID']."&format=rss20";
-    $xml = simplexml_load_file($rssUrl); // Load the XML file
- 
-    // This creates an array called "entry" that puts each <item> in FB's
-    // XML format into the array
-    $entry = $xml->channel->item;
+	include_once(ABSPATH . WPINC . '/feed.php');
 	
-    // This is just a blank string I create to add to as I loop through our
-    // FB feed. Feel free to format however you want, or do whatever else
-	/*
-	*/
-    // you want with the data.
-    $returnMarkup = '';
-	$returnMarkup .= '
-<div class="fbf_facebook_page_widget_container">	
-<ul class="fbf_facebook_page_widget">';
-   
-    for ($i = 0; $i < $options['num']; $i++) {
-        $returnMarkup .= "<li>";
+	 $optionID = $options['pageID']; // Getting Facebook Page ID 
+	 $rss_array = explode(',',$optionID);
+	 $feed_link_array = "";
 	
-	$returnMarkup .="<h4><a href=".$entry[$i]->link." class='facebook_page-link' ".$link_target.">".substr($entry[$i]->title,0,200)."</a></h4>"; // Title of the update
+	 foreach($rss_array as $feed_link_id){ // Creating string of RSS links seperated by commas
+		 $feed_link_array .= ',http://www.facebook.com/feeds/page.php?id='.$feed_link_id.'&format=rss20';	
+	 }
 	
-	# Shows avatar of Facebook page	
-	if ($options['show_avatar'] != '') { 
-	$returnMarkup .="<div class=\"facebook_page-avatar\"><img src=\"http://graph.facebook.com/".$options['pageID']."/picture?type=".$avatar_size."\"  alt=".$entry[$i]->author." /></div>";
+	 if($feed_link_array{0}==",")
+		$feed_link_array=substr($feed_link_array,1,strlen($feed_link_array));    
+	 $feed_links = explode(",",$feed_link_array); // Array of RSS Feed links
+	 
+	 if(function_exists('fetch_feed')) {
+			$feed = fetch_feed($feed_links);
+			if (!is_wp_error($feed)) : $feed->init();
+				$feed->set_output_encoding('UTF-8');	// set encoding
+				$feed->handle_content_type();		// ensure encoding
+				$feed->set_cache_duration(21600);	// six hours in seconds
+				$limit = $feed->get_item_quantity($options['num']);	// get  feed items
+				$items = $feed->get_items(0, $limit);	// set array
+			endif;
 	}
 	
+	if ($limit == 0) { 
+		echo '<p>RSS Feed currently unavailable.</p>'; 
+	} else {
+
+    $returnMarkup = '';
+	$returnMarkup .= '<div class="fbf_facebook_page_widget_container">	
+<ul class="fbf_facebook_page_widget">';
 	
-       // $returnMarkup .= "<p>".$entry[$i]->link."</p>"; // Link to the update
-    if ($options['show_description'] != '') {   
-	   $returnMarkup .= "<div class=\"fbf_desc\">".$entry[$i]->description."</div>"; // Full content
-    }
-	 //   $returnMarkup .= "<p>".$entry[$i]->pubDate."</p>"; // The date published
+	$blocks = array_slice($items, 0, $options['num']);
+	foreach ($blocks as $block) {  
 		
+		if ($options['feed_title'] == "true" ) { 
+			$feedtitle ="<h4><a href=".$block->get_permalink()." class='facebook_page-link' ".$link_target.">".substr($block->get_title(), 0, 200)."</a></h4>"; // Title of the update
+		}elseif ($options['feed_title'] == "" ) {
+			$feedtitle = null;
+		}
 	
-	 if ($options['update'] != '') {
-		$time = strtotime($entry[$i]->pubDate);
-		$tval = timesince($time);
-			$h_time = ( ( abs( time() - $time) ) < 86400 ) ? sprintf( __('%s ago', 'fbf'), human_time_diff( $time )) : date(__('Y/m/d'), $time);
-			$returnMarkup .= ', '.sprintf( __('%s', 'fbf'),' <span class="facebook_page-timestamp"><abbr title="' . date(__('Y/m/d H:i:s', 'fbf'), $time) . '">' . $tval . '</abbr></span>' );
-	} 
+		$returnMarkup .= $feedtitle;	
 	
-	//  Show Timestamp - if option enabled
-		 $returnMarkup .='</li>
-';
+		# Shows avatar of Facebook page	
+			if ($options['show_avatar'] != '') { 
+			$returnMarkup .="<div class=\"facebook_page-avatar\"><img src=\"http://graph.facebook.com/".$options['pageID']."/picture?type=".$avatar_size."\"  alt=".$block->author." /></div>";
+			}
 		
-      //  $returnMarkup .= "<p>".$entry[$i]->author."</p></li>"; // The author of the post
-    }
- 
-    // Finally, we return (or in this case echo) our formatted string with our
-    // Facebook page feed data in it!
-    // $returnMarkup;
+			if ($options['show_description'] != '') {   
+				$desc_feed = str_replace('href="http://www.facebook.com', 'href="', $block->get_description()); // Emptying all links
+				$desc = str_replace('href="', 'href="http://www.facebook.com', $desc_feed); // adding facebook link - to avoid facebook redirector l.php's broken link error
+				$returnMarkup .= "<div class=\"fbf_desc\">".$desc."</div>"; // Full content
+			}
+		
+			 if ($options['update'] != '') {
+				$time = strtotime($block->get_date("l, F jS, Y"));
+				$tval = timesince($time);
+					$h_time = ( ( abs( time() - $time) ) < 86400 ) ? sprintf( __('%s ago', 'rstw'), human_time_diff( $time )) : date(__('Y/m/d'), $time);
+					$returnMarkup .= ', '.sprintf( __('%s', 'rstw'),' <span class="facebook_page-timestamp"><abbr title="' . date(__('Y/m/d H:i:s', 'rstw'), $time) . '">' . $tval . '</abbr></span>' );
+			 } //  Show Timestamp - if option enabled
+		 $returnMarkup .='</li>';
+	} // For Loop Ends here
+	
 	$returnMarkup .='</ul>
-	</div>';	
+		</div>';
+	}
 
 	return $returnMarkup;
 }
+
+
+
   // Formatting Time stamps
 function timesince($original) {
     // array of time period chunks
@@ -181,7 +193,11 @@ class FacebookPageFeedWidget extends WP_Widget {
 				'label'	=> __( 'Show timestamps', 'fbf' ),
 				'type'	=> 'checkbox'
 			),
-			
+			array(
+				'name'	=> 'feed_title',
+				'label'	=> __( 'Show feed title', 'fbf' ),
+				'type'	=> 'checkbox'
+			),
 			array(
 				'name'	=> 'show_description',
 				'label'	=> __( 'Show Description', 'fbf' ),
@@ -243,6 +259,7 @@ class FacebookPageFeedWidget extends WP_Widget {
 		$default['show_avatar']	= true;
 		$default['avatar_size']	= 'small'; // Available sizes square, small, normal, or large
 		$default['link_target_blank']	= true;
+		$default['feed_title'] = true;
 	
 		$instance = wp_parse_args($instance,$default);
 	
@@ -289,12 +306,13 @@ function fbf_short_code($atts) {
 			'show_avatar' => false,
 			'avatar_size' => 'small',
 			'link_target_blank' => false,
+			'feed_title' => true,
      ), $atts);
     
 	 return fbf_facebook_messages($atts);
 }
 // sample short code
-// [fbf_page_feed pageID="33138223345" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true"]
+// [fbf_page_feed pageID="33138223345" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true" feed_title => "true" ]
 
 add_shortcode('fbf_page_feed', 'fbf_short_code');
 
