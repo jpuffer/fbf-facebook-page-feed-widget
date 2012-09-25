@@ -3,7 +3,7 @@
 Plugin Name: FBF - Facebook Page Feed Widget
 Description: Displays your Facebook Page feed in the sidbar of your blog.Simply add your pageID and all your visitors can see your staus!
 Author: Lakshmanan PHP
-Version: 1.1
+Version: 1.2
 */
 
 /* 
