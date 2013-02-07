@@ -3,7 +3,7 @@
 Plugin Name: FBF - Facebook Page Feed Widget
 Description: Displays your Facebook Page feed in the sidbar of your blog.Simply add your pageID and all your visitors can see your staus!
 Author: Lakshmanan PHP
-Version: 1.2
+Version: 1.2.1
 */
 
 /* 
@@ -23,7 +23,7 @@ Version: 1.2
 function fbf_facebook_messages($options) {
 
 	// CHECK OPTIONS
-	
+	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 0;' )); // To reduce cache time
 	if ($options['pageID'] == '') {
 		return __('Facebook pageID not configured','fbf');
 	} 
@@ -56,15 +56,18 @@ function fbf_facebook_messages($options) {
 	 
 	 if(function_exists('fetch_feed')) {
 			$feed = fetch_feed($feed_links);
+			if ( is_wp_error( $feed ) ) {
+			   $error_string = $feed->get_error_message();
+			   echo '<div id="message" class="error"><p>' . $error_string . '</p></div>';
+			}
 			if (!is_wp_error($feed)) : $feed->init();
 				$feed->set_output_encoding('UTF-8');	// set encoding
 				$feed->handle_content_type();		// ensure encoding
-				$feed->set_cache_duration(21600);	// six hours in seconds
+				$feed->enable_cache(false);	// no cache
 				$limit = $feed->get_item_quantity($options['num']);	// get  feed items
 				$items = $feed->get_items(0, $limit);	// set array
 			endif;
 	}
-	
 	if ($limit == 0) { 
 		echo '<p>RSS Feed currently unavailable.</p>'; 
 	} else {
@@ -75,15 +78,17 @@ function fbf_facebook_messages($options) {
 	
 	$blocks = array_slice($items, 0, $options['num']);
 	foreach ($blocks as $block) {  
-		
+		$returnMarkup .='<li>';
 		if ($options['feed_title'] == "true" ) { 
 			$feedtitle ="<h4><a href=".$block->get_permalink()." class='facebook_page-link' ".$link_target.">".substr($block->get_title(), 0, 200)."</a></h4>"; // Title of the update
 		}elseif ($options['feed_title'] == "" ) {
 			$feedtitle = null;
 		}
 	
-		$returnMarkup .= $feedtitle;	
-	
+	$returnMarkup .= $feedtitle;	
+	if ($options['like_button'] != '' && $options['like_button_position']=="top") {  
+		$returnMarkup .='<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=30" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:30px;" allowTransparency="true"></iframe>';
+		}
 		# Shows avatar of Facebook page	
 			if ($options['show_avatar'] != '') { 
 			$returnMarkup .="<div class=\"facebook_page-avatar\"><img src=\"http://graph.facebook.com/".$options['pageID']."/picture?type=".$avatar_size."\"  alt=".$block->author." /></div>";
@@ -96,11 +101,14 @@ function fbf_facebook_messages($options) {
 			}
 		
 			 if ($options['update'] != '') {
-				$time = strtotime($block->get_date("l, F jS, Y"));
-				$tval = timesince($time);
+			$time = strtotime($block->get_date("j F Y, H:i:s"));
+ 			$tval = timesince($time);
 					$h_time = ( ( abs( time() - $time) ) < 86400 ) ? sprintf( __('%s ago', 'rstw'), human_time_diff( $time )) : date(__('Y/m/d'), $time);
-					$returnMarkup .= ', '.sprintf( __('%s', 'rstw'),' <span class="facebook_page-timestamp"><abbr title="' . date(__('Y/m/d H:i:s', 'rstw'), $time) . '">' . $tval . '</abbr></span>' );
+					$returnMarkup .= ''.sprintf( __('%s', 'rstw'),' <span class="facebook_page-timestamp"><abbr title="' .$block->get_date("j F Y, H:i:s") . '">'.timesince($time).'</abbr></span>' );
 			 } //  Show Timestamp - if option enabled
+		if ($options['like_button'] != '' && $options['like_button_position']=="bottom") {  
+		$returnMarkup .='<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=80" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:80px;" allowTransparency="true"></iframe>';
+		}
 		 $returnMarkup .='</li>';
 	} // For Loop Ends here
 	
@@ -110,52 +118,27 @@ function fbf_facebook_messages($options) {
 
 	return $returnMarkup;
 }
-
-
-
-  // Formatting Time stamps
-function timesince($original) {
-    // array of time period chunks
-    $chunks = array(
-        array(60 * 60 * 24 * 365 , 'year'),
-        array(60 * 60 * 24 * 30 , 'month'),
-        array(60 * 60 * 24 * 7, 'week'),
-        array(60 * 60 * 24 , 'day'),
-        array(60 * 60 , 'hour'),
-        array(60 , 'minute'),
+function timesince ($time)
+{
+    $time = time() - $time; // to get the time since that moment
+    $tokens = array (
+        31536000 => 'year',
+        2592000 => 'month',
+        604800 => 'week',
+        86400 => 'day',
+        3600 => 'hour',
+        60 => 'minute',
+        1 => 'second'
     );
 
-    $today = time(); /* Current unix time  */
-    $since = $today - $original;
-
-    if($since > 604800) {
-    $print = date("M jS", $original);
-
-    if($since > 31536000) {
-        $print .= ", " . date("Y", $original);
+    foreach ($tokens as $unit => $text) {
+        if ($time < $unit) continue;
+        $numberOfUnits = floor($time / $unit);
+        $t = $numberOfUnits.' '.$text.(($numberOfUnits>1)?'s':'');
+		return $t. " ago ";
     }
 
-    return $print;
 }
-
-// $j saves performing the count function each time around the loop
-for ($i = 0, $j = count($chunks); $i < $j; $i++) {
-
-    $seconds = $chunks[$i][0];
-    $name = $chunks[$i][1];
-
-    // finding the biggest chunk (if the chunk fits, break)
-    if (($count = floor($since / $seconds)) != 0) {
-        break;
-    }
-}
-
-$print = ($count == 1) ? '1 '.$name : "$count {$name}s";
-
-return $print . " ago";
-
-} 
-
 
 /**
  * FacebookPageFeedWidget Class
@@ -174,7 +157,7 @@ class FacebookPageFeedWidget extends WP_Widget {
 			),
 			array(
 				'name'	=> 'pageID',
-				'label'	=> __( 'Facebook Page ID', 'fbf' ),
+				'label'	=> __( 'Facebook Page ID<br> (Replace your facebook page ID here)', 'fbf' ),
 				'type'	=> 'text'
 			),
 			array(
@@ -214,6 +197,17 @@ class FacebookPageFeedWidget extends WP_Widget {
 				'label'	=> __( 'Create links on new window / tab', 'fbf' ),
 				'type'	=> 'checkbox'
 			),
+			array(
+				'name'	=> 'like_button',
+				'label'	=> __( 'Show facebook like button', 'fbf' ),
+				'type'	=> 'checkbox'
+			),
+			array(
+				'name'	=> 'like_button_position',
+				'label'	=> __( 'Like button position', 'fbf' ),
+				'type'	=> 'radio',
+				'values' => array('top'=>'Top','bottom'=>'Bottom')
+			),
 			
 		);
 
@@ -251,15 +245,17 @@ class FacebookPageFeedWidget extends WP_Widget {
 
     /** @see WP_Widget::form */
     function form($instance) {
-		$default['title']			= __( 'FBF Facebook page Feed Widget', 'fbf' );
-		$default['pageID']		= '';
+		$default['title']		= __( 'FBF Facebook page Feed Widget', 'fbf' );
+		$default['pageID']		= '133662330114199';
 		$default['num']			= '5';
-		$default['update']			= true;
+		$default['feed_title']	= true;
+		$default['update']		= true;
 		$default['show_description']	= true;
 		$default['show_avatar']	= true;
 		$default['avatar_size']	= 'small'; // Available sizes square, small, normal, or large
 		$default['link_target_blank']	= true;
-		$default['feed_title'] = true;
+		$default['like_button'] = true;
+		$default['like_button_position'] = 'top';
 	
 		$instance = wp_parse_args($instance,$default);
 	
@@ -288,18 +284,16 @@ class FacebookPageFeedWidget extends WP_Widget {
 // register FacebookPageFeedWidget widget
 add_action('widgets_init', create_function('', 'return register_widget("FacebookPageFeedWidget");'));
 
-// register stylesheet 25-aug-2012
+// register stylesheet 25-aug-2012 
 add_action('wp_head', 'fbf_add_header_css', 100);
 function fbf_add_header_css() {
 	echo '<link type="text/css" media="screen" rel="stylesheet" href="' . plugins_url('fbf-facebook-page-feed-widget/fbf_facebook_page_feed.css') . '" />' . "\n";
 }
-
-
-// Short code FacebookPageFeed 25-aug-2012
+// Short code FacebookPageFeed 25-aug-2012 - edited 2 feb 2013
 function fbf_short_code($atts) {
-   	 $atts['pageID'] = $atts['pageid'];
+	 $atts['pageID'] = $atts['pageid'];
 	 $atts= shortcode_atts(array(
-			'pageID' => '33138223345',
+			'pageID' => '133662330114199',
 			'num' => '5',
 			'update' => false,
 			'show_description' => false,
@@ -307,12 +301,14 @@ function fbf_short_code($atts) {
 			'avatar_size' => 'small',
 			'link_target_blank' => false,
 			'feed_title' => true,
+			'like_button' => true,
+			'like_button_position' => true,
      ), $atts);
     
 	 return fbf_facebook_messages($atts);
 }
 // sample short code
-// [fbf_page_feed pageID="33138223345" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true" feed_title => "true" ]
+// [fbf_page_feed pageID="133662330114199" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true" feed_title = "true" like_button="true" like_button_position="top"]
 
 add_shortcode('fbf_page_feed', 'fbf_short_code');
 
