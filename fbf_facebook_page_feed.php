@@ -23,7 +23,7 @@ Version: 1.2.1
 function fbf_facebook_messages($options) {
 
 	// CHECK OPTIONS
-	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 0;' )); // To reduce cache time
+	add_filter( 'wp_feed_cache_transient_lifetime', create_function( '$a', 'return 60;' )); // To reduce cache time
 	if ($options['pageID'] == '') {
 		return __('Facebook pageID not configured','fbf');
 	} 
@@ -58,7 +58,18 @@ function fbf_facebook_messages($options) {
 			$feed = fetch_feed($feed_links);
 			if ( is_wp_error( $feed ) ) {
 			   $error_string = $feed->get_error_message();
-			   echo '<div id="message" class="error"><p>' . $error_string . '</p></div>';
+			   $err_msg='<div id="message" class="error">';
+			   $err_msg.='<strong>Unable to fetch the feed</strong><br><span>Error :</span><ul>';
+					foreach( $error_string as $err ): 
+					if($err=="file_get_contents could not read the file") 
+						$error_detail = "SimplePie could not read the feed";
+					else
+						$error_detail = $err;
+					$err_msg.='<li>'.$error_detail.'</li>';
+					endforeach;
+			   $err_msg.='</ul>
+				    </div>';
+			   echo $err_msg; // Prints the error message
 			}
 			if (!is_wp_error($feed)) : $feed->init();
 				$feed->set_output_encoding('UTF-8');	// set encoding
@@ -69,7 +80,7 @@ function fbf_facebook_messages($options) {
 			endif;
 	}
 	if ($limit == 0) { 
-		echo '<p>RSS Feed currently unavailable.</p>'; 
+		echo '<p><strong>RSS Feed currently unavailable.</strong></p>'; 
 	} else {
 
     $returnMarkup = '';
@@ -85,7 +96,7 @@ function fbf_facebook_messages($options) {
 			$feedtitle = null;
 		}
 	
-	$returnMarkup .= $feedtitle;	
+	$returnMarkup .= html_entity_decode($feedtitle);	
 	if ($options['like_button'] != '' && $options['like_button_position']=="top") {  
 		$returnMarkup .='<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=30" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:30px;" allowTransparency="true"></iframe>';
 		}
@@ -96,7 +107,7 @@ function fbf_facebook_messages($options) {
 		
 			if ($options['show_description'] != '') {   
 				$desc_feed = str_replace('href="http://www.facebook.com', 'href="', $block->get_description()); // Emptying all links
-				$desc = str_replace('href="', 'href="http://www.facebook.com', $desc_feed); // adding facebook link - to avoid facebook redirector l.php's broken link error
+				$desc = html_entity_decode(str_replace('href="', 'href="http://www.facebook.com', $desc_feed)); // adding facebook link - to avoid facebook redirector l.php's broken link error
 				$returnMarkup .= "<div class=\"fbf_desc\">".$desc."</div>"; // Full content
 			}
 		
