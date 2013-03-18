@@ -84,6 +84,7 @@ function fbf_facebook_messages($options) {
 	} else {
 
     $returnMarkup = '';
+	$returnMarkup .= '<!--- page ID '.$optionID.' -->';
 	$returnMarkup .= '<div class="fbf_facebook_page_widget_container">	
 <ul class="fbf_facebook_page_widget">';
 	
@@ -96,9 +97,16 @@ function fbf_facebook_messages($options) {
 			$feedtitle = null;
 		}
 	
-	$returnMarkup .= html_entity_decode($feedtitle);	
-	if ($options['like_button'] != '' && $options['like_button_position']=="top") {  
-		$returnMarkup .='<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=30" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:30px;" allowTransparency="true"></iframe>';
+	$returnMarkup .= html_entity_decode($feedtitle,ENT_COMPAT, 'UTF-8');	
+	# Like button
+	
+	$like_button = '<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=30" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:30px;" allowTransparency="true"></iframe>';
+	
+	# Shows fb like button on top, below the feed title	
+		if ($options['like_button'] !='' && $options['like_button'] != false) {  
+			if ($options['like_button_position']=="top") {
+				$returnMarkup .= $like_button;
+				}
 		}
 		# Shows avatar of Facebook page	
 			if ($options['show_avatar'] != '') { 
@@ -107,7 +115,7 @@ function fbf_facebook_messages($options) {
 		
 			if ($options['show_description'] != '') {   
 				$desc_feed = str_replace('href="http://www.facebook.com', 'href="', $block->get_description()); // Emptying all links
-				$desc = html_entity_decode(str_replace('href="', 'href="http://www.facebook.com', $desc_feed)); // adding facebook link - to avoid facebook redirector l.php's broken link error
+				$desc = html_entity_decode(str_replace('href="', 'href="http://www.facebook.com', $desc_feed),ENT_COMPAT, 'UTF-8'); // adding facebook link - to avoid facebook redirector l.php's broken link error
 				$returnMarkup .= "<div class=\"fbf_desc\">".$desc."</div>"; // Full content
 			}
 		
@@ -117,8 +125,11 @@ function fbf_facebook_messages($options) {
 					$h_time = ( ( abs( time() - $time) ) < 86400 ) ? sprintf( __('%s ago', 'rstw'), human_time_diff( $time )) : date(__('Y/m/d'), $time);
 					$returnMarkup .= ''.sprintf( __('%s', 'rstw'),' <span class="facebook_page-timestamp"><abbr title="' .$block->get_date("j F Y, H:i:s") . '">'.timesince($time).'</abbr></span>' );
 			 } //  Show Timestamp - if option enabled
-		if ($options['like_button'] != '' && $options['like_button_position']=="bottom") {  
-		$returnMarkup .='<iframe src="http://www.facebook.com/plugins/like.php?href='.$block->get_permalink().'&amp;layout=standard&amp;show_faces=true&amp;width=450&amp;action=like&amp;colorscheme=light&amp;height=80" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100%; height:80px;" allowTransparency="true"></iframe>';
+		# Shows fb like button on bottom, below the feed description	
+		if ($options['like_button'] !='' && $options['like_button'] != false) {     
+			if ($options['like_button_position']=="bottom") {
+				$returnMarkup .= $like_button;
+				}
 		}
 		 $returnMarkup .='</li>';
 	} // For Loop Ends here
@@ -313,13 +324,17 @@ function fbf_short_code($atts) {
 			'link_target_blank' => false,
 			'feed_title' => true,
 			'like_button' => true,
-			'like_button_position' => true,
+			'like_button_position' => false,
      ), $atts);
     
 	 return fbf_facebook_messages($atts);
 }
 // sample short code
 // [fbf_page_feed pageID="133662330114199" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true" feed_title = "true" like_button="true" like_button_position="top"]
+
+// sample short code without like button
+// [fbf_page_feed pageID="133662330114199" num="2" show_description="true" update="true" show_avatar="true" avatar_size="square" link_target_blank="true" feed_title = "true" ]
+
 
 add_shortcode('fbf_page_feed', 'fbf_short_code');
 
