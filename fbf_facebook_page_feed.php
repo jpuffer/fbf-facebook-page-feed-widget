@@ -4,11 +4,12 @@ Plugin Name: FBF - Facebook Page Feed Widget
 Description: Displays your Facebook Page feed in the sidebar of your blog. Simply add your pageID and all your visitors can see your staus!
 Author: Jake Puffer
 Based on : FBF - Facebook Page Feed Widget by Lakshmanan PHP
-Version: 1.2.1
+Version: 1.3.1
 */
 
 /*
    Version 1.0 - update - Showing avatar, shor code, widget styles 25-aug-2012
+   Version 1.3 - update - multiple feeds now works and are mixed together and sorted by date.  avatar images now work for multiple feeds. 28-sept-2014
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2,
@@ -45,19 +46,11 @@ function fbf_facebook_messages($options) {
 
 	$optionID = $options['pageID']; // Getting Facebook Page ID
 	$rss_array = explode(',',$optionID);
-/* 	$feed_link_array = ""; */
 	$feed_link_arr = array();
 
 	foreach($rss_array as $feed_link_id){ // Creating string of RSS links seperated by commas
-/* 		$feed_link_array .= ',http://www.facebook.com/feeds/page.php?id='.$feed_link_id.'&format=rss20'; */
 		array_push($feed_link_arr, 'http://www.facebook.com/feeds/page.php?id='.$feed_link_id.'&format=rss20');
 	}
-
-	/*
-if($feed_link_array{0}==",")
-		$feed_link_array=substr($feed_link_array,1,strlen($feed_link_array));
-	$feed_links = explode(",",$feed_link_array); // Array of RSS Feed links
-*/
 
 	if(function_exists('fetch_feed')) {
 
@@ -66,17 +59,10 @@ if($feed_link_array{0}==",")
 		$returnMar  .= '<div class="fbf_facebook_page_widget_container">
 <ul class="fbf_facebook_page_widget">';
 
-		//for ($f=0;$f< count($rss_array); $f++){
-		for ($f=0;$f< 1; $f++){
-		
-		//$feed_link_array
-
-			//$feed[$f] = fetch_feed($feed_links[$f]);
-			$feed[$f] = fetch_feed($feed_link_arr);
+			$feed_result = fetch_feed($feed_link_arr);
 			
-			
-			if ( is_wp_error( $feed[$f] ) ) {
-				$error_string[$f] = $feed[$f]->get_error_message();
+			if ( is_wp_error( $feed_result ) ) {
+				$error_string[$f] = $feed_result->get_error_message();
 				$err_msg='<div id="message" class="error">';
 				$err_msg.='<strong>Unable to fetch the feed</strong><br><span>Error :</span><ul>';
 				foreach( $error_string as $err ):
@@ -90,12 +76,12 @@ if($feed_link_array{0}==",")
 				    </div>';
 				echo $err_msg; // Prints the error message
 			}
-			if (!is_wp_error($feed[$f])) : $feed[$f]->init();
-			$feed[$f]->set_output_encoding('UTF-8'); // set encoding
-			$feed[$f]->handle_content_type();  // ensure encoding
-			$feed[$f]->enable_cache(false); // no cache
-			$limit = $feed[$f]->get_item_quantity($options['num']); // get  feed items
-			$items  = $feed[$f]->get_items(0, $limit); // set array
+			if (!is_wp_error($feed_result)) : $feed_result->init();
+			$feed_result->set_output_encoding('UTF-8'); // set encoding
+			$feed_result->handle_content_type();  // ensure encoding
+			$feed_result->enable_cache(false); // no cache
+			$limit = $feed_result->get_item_quantity($options['num']); // get  feed items
+			$items  = $feed_result->get_items(0, $limit); // set array
 			endif;
 
 			if ($limit == 0) {
@@ -165,7 +151,6 @@ if($feed_link_array{0}==",")
 						}
 					}
 					$returnMarkup .='</li>';
-				} // For Loop Ends here
 			}
 			unset($feed);
 		} // Multiple feeds for loop
