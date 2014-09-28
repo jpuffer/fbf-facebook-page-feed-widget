@@ -53,7 +53,7 @@ function fbf_facebook_messages($options) {
 	}
 
 	if(function_exists('fetch_feed')) {
-
+		$returnMarkup = '';
 		$returnMar  = '';
 		$returnMar .= '<!--- page ID '.$optionID.' -->';
 		$returnMar  .= '<div class="fbf_facebook_page_widget_container">
@@ -88,8 +88,8 @@ function fbf_facebook_messages($options) {
 				echo '<p><strong>Facebook feed currently unavailable.</strong></p>';
 			} else {
 
-				$blocks[$f] = array_slice($items, 0, $options['num']);
-				foreach ($blocks[$f] as $block) {
+				$blocks = array_slice($items, 0, $options['num']);
+				foreach ($blocks as $block) {
 					$returnMarkup .='<li>';
 					
 					if ($options['feed_title'] == "true" ) {
@@ -119,7 +119,7 @@ function fbf_facebook_messages($options) {
 						$qs_arr = explode("&",$url_qs);
 						$fbid = $qs_arr[0];
 					
-						$returnMarkup .="<div class=\"facebook_page-avatar\"><img src=\"http://graph.facebook.com/".$fbid."/picture?type=".$avatar_size."\"  alt=".$block->author." /></div>";
+						$returnMarkup .="<div class=\"facebook_page-avatar\"><img src=\"http://graph.facebook.com/".$fbid."/picture?type=".$avatar_size."\"  alt=\"logo\" /></div>";
 					}
 
 					#shows timestamp
@@ -154,7 +154,7 @@ function fbf_facebook_messages($options) {
 			}
 			unset($feed);
 		} // Multiple feeds for loop
-		$returnMar_last  .='</ul>
+		$returnMar_last  ='</ul>
 		</div>';
 	}
 	$returnMarkup = $returnMar.$returnMarkup.$returnMar_last;
