@@ -15,12 +15,27 @@ Few styles are changed - container bg color and width removed - 7 feb 2013
 	/* -add your own styles -*/
 }
 
+.fbf_facebook_page_widget{
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+}
+
 .fbf_facebook_page_widget li {
 	border-bottom: 1px dashed #dbdbdb;
 	list-style-type: none;
 	margin-bottom: 5px;
 	padding: 5px;
 }
+.fbf_facebook_page_widget li iframe{
+	width: 143px;
+	margin-left: 65px;
+}
+
+.fbf_facebook_page_widget .fbf_desc{
+	margin-left: 65px;
+}
+
 .fbf_facebook_page_widget h4 {
 	font-size: 14px;
 	/* -add your own styles -*/
@@ -32,7 +47,18 @@ Few styles are changed - container bg color and width removed - 7 feb 2013
 .facebook_page-avatar img { 
 	border:none;
 	float:left;
-	padding:5px;
+	margin: 5px 10px 5px 0;
+	width: 55px;
+	height: 55px;
 	/* -add your own styles -*/
 }
 
+.facebook_page-timestamp, .facebook_page-timestamp:hover, .facebook_page-timestamp:visited{
+	color: #666666;
+}
+.facebook_page-timestamp abbr{
+	cursor: pointer;
+	cursor: hand;
+	font-size: 11px;
+	border-bottom: none;
+}
