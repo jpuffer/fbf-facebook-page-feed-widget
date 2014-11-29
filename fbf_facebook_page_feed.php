@@ -137,6 +137,7 @@ function fbf_facebook_messages($options) {
 
 					if ($options['show_description'] != '') {
 						$desc_feed = str_replace('href="http://www.facebook.com', 'href="', $block->get_description()); // Emptying all links
+						$desc_feed = str_replace('target=""', 'target="'.$link_target.'"', $block->get_description()); // if has empty target, give a target
 						$desc = html_entity_decode(str_replace('href="', 'href="http://www.facebook.com', $desc_feed),ENT_COMPAT, 'UTF-8'); // adding facebook link - to avoid facebook redirector l.php's broken link error
 						$returnMarkup .= "<div class=\"fbf_desc\">".$desc."</div>"; // Full content
 					}
